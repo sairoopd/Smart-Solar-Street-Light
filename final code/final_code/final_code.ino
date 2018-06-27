@@ -1,29 +1,19 @@
 #define BLYNK_PRINT Serial
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
-
-// You should get Auth Token in the Blynk App.
-// Go to the Project Settings (nut icon).
-char auth[] = "c0cf520d9aec4775957d83398156a266";
-
-// Your WiFi credentials.
-// Set password to "" for open networks.
-char ssid[] = "Roo";
-char pass[] = "qwertyui";
-int ledPin = 4;  // LED on Pin 13 of Arduino
-int pirPin = 7; // Input for HC-S501
-int pirValue; // Place to store read PIR Value
+char auth[] = "***************";
+char ssid[] = "";
+char password[] = "**********";
+int ledPin = 4;  // Onboard LED Pin 4 of NodeMCU
+int pirPin = 7; 
+int pirValue; 
 
 
 void setup()
 {
-  // Debug console
   Serial.begin(9600);
 
   Blynk.begin(auth, ssid, pass);
-  // You can also specify server:
-  //Blynk.begin(auth, ssid, pass, "blynk-cloud.com", 80);
-  //Blynk.begin(auth, ssid, pass, IPAddress(192,168,1,100), 8080);
   pinMode(ledPin, OUTPUT);
   pinMode(pirPin, INPUT);
 
@@ -33,14 +23,19 @@ void setup()
 
 void loop()
 {
+  motionDetected();
   Blynk.run();
-  while(pirValue = LOW){
-   pirValue = digitalRead(pirPin);
+  
+}
+void  motionDetected (void)
+{
+  pirValue = digitalRead(pirPin);
+  if (!pirValue){     // If no motion is detcted LED stays at 50% brightness
    analogWrite(ledpin, 512);
   }
-  //Serial.println(pirValue);
-  if (pirValue = HIGH){
-   digitalWrite(ledPin, pirValue);
+  
+  while (pirValue){ // If any motion is detected LED switches to full brightness for 20 seconds
+   digitalWrite(ledPin, 1023);
   }
 }
 
