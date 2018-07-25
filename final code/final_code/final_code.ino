@@ -1,12 +1,12 @@
 #define BLYNK_PRINT Serial
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
-char auth[] = "c0cf520d9aec4775957d83398156a266";
+char auth[] = "**********56a266";
 
 // WiFi credentials.
 // Set password to "" for open networks.
 char ssid[] = "Roo";
-char pass[] = "qwertyui";
+char pass[] = "**********";
 #define led D7  // LED on Pin D7 of NodeMCU
 #define pir D1 // Input for HC-S501
 int pirop; // Place to store PIR input
