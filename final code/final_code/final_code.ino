@@ -1,41 +1,56 @@
 #define BLYNK_PRINT Serial
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
+char auth[] = "c0cf520d9aec4775957d83398156a266";
 
-char auth[] = "***************";
-char ssid[] = "";
-char password[] = "**********";
-int ledPin = 4;  // Onboard LED Pin 4 of NodeMCU
-int pirPin = 7; 
-int pirValue; 
-=======
+// WiFi credentials.
+// Set password to "" for open networks.
+char ssid[] = "Roo";
+char pass[] = "qwertyui";
+#define led D7  // LED on Pin D7 of NodeMCU
+#define pir D1 // Input for HC-S501
+int pirop; // Place to store PIR input
+BlynkTimer timer;
+
 void setup()
 {
-  Serial.begin(9600);
-
+  // Debug console
+  Serial.begin(115200); 
+  delay(10);
   Blynk.begin(auth, ssid, pass);
-  pinMode(ledPin, OUTPUT);
-  pinMode(pirPin, INPUT);
+  pinMode(led, OUTPUT);
+  pinMode(pir, INPUT);
+  digitalWrite(led, LOW);
+  timer.setInterval(250L, motionDetected);
+}
 
-  digitalWrite(ledPin, LOW);
+void  motionDetected()
+{ 
+  pirop = digitalRead(pir);
+  if (!pirop){     // If no motion is detcted LED stays at 50% brightness
+    Serial.println("no motion detcted");
+    analogWrite(led, 75);
+  }
+  
+  else if (pirop){ // If any motion is detected LED switches to full brightness for 20 seconds
+   Serial.println("motion detcted");
+   digitalWrite(led, HIGH);
+  }
+}
 
+int pinValue;
+BLYNK_WRITE(V5){
+    pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
 }
 
 void loop()
 {
-  motionDetected();
   Blynk.run();
-  
+  if(pinValue) // if Button sends 1
+    {      
+     timer.run(); // start the function
+    }
 }
-void  motionDetected (void)
-{
-  pirValue = digitalRead(pirPin);
-  if (!pirValue){     // If no motion is detcted LED stays at 50% brightness
-   analogWrite(ledpin, 512);
-  }
-  
-  while (pirValue){ // If any motion is detected LED switches to full brightness for 20 seconds
-   digitalWrite(ledPin, 1023);
-  }
-}
+
+
 
