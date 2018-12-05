@@ -1,5 +1,5 @@
 # SSSL
-Smart solar LED street light network.
+Smart solar street light network.
 
 The aim of this project is to design a Smart solar LED street light network that is fully automated and consumes minimal power.
 In many cities the street lights are still controlled manually and have no additional control over brightness and state of the LED light's health.
