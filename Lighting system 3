@@ -1,0 +1,131 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h> 
+#define FIREBASE_HOST "**********.firebaseio.com"                     //the Firebase Project URL goes here without "http:" , "\" and "/"
+#define FIREBASE_AUTH "**********"       //Firebase Database Secret
+#define WIFI_SSID "Roo"
+#define WIFI_PASSWORD "qwertyui"
+#define led D7  // LED on Pin D7/GPIO 13 of NodeMCU
+#define switch1 D0 // switch connected to D1 on nodemcu
+int pirop; // Place to store power-saver mode input
+int x1;
+int y;
+int b;
+int switchstat;
+int analogin = A0;
+float vout = 0.0;
+float vin = 0.0;
+float avgvin = 0.0;
+float r1 = 30000.0;
+float r2 = 7500.0;
+int value = 0;
+int i =0;
+/****************************/
+/****************************/
+/****************************/
+
+void setup()
+{
+  // Debug console
+  Serial.begin(115200);
+  pinMode(led, OUTPUT);
+  pinMode(switch1, INPUT); 
+  Serial.println("setup");
+  switchstat = digitalRead(switch1);
+  if (switchstat){
+    Serial.println("switch ON");
+    digitalWrite(led, HIGH);}
+  WiFiManager wifiManager;
+  wifiManager.autoConnect("SSL");
+  IPAddress ip = WiFi.localIP();
+  Firebase.begin(FIREBASE_HOST,FIREBASE_AUTH); //connect to firebase cloud
+  Firebase.setInt("S15",0);                     //firebase variable S9 to get LED status
+  Firebase.setInt("S10",0);                    //variable to get brightness level
+  Firebase.setInt("S11",0);                    //variable to get power saving status
+  Firebase.setInt("S12",0); //variable to push battery percentage to the cloud and to the apps
+  Firebase.setInt("S13",0); //variable to push the power consumed to the cloud and to the apps
+  Firebase.setInt("S14",0);
+}
+
+void voltageread(){
+  value = analogRead(analogin);
+  vout = (value * 3.3)/ 1024.0;
+  vin = vout / (r2/(r1+r2));
+  Serial.print("Input V=");
+  Serial.println(vin,2);
+  if (vin > 8.99 && vin <12.69){
+    Firebase.setInt("S14",vin);
+    vin = vin - 9.0;
+    vin = (vin/0.036);
+    vin = ((int)vin);
+    Serial.println("battery level: ");
+    Serial.print(vin);
+    Serial.print("%");
+    Firebase.setInt("S12",vin);}
+  else{
+    vin = 0;
+    Firebase.setInt("S12",vin);
+    }
+  delay(1000);
+}
+
+void firebasereconnect()
+{
+  Serial.println("Trying to reconnect");
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+}
+ 
+void loop() 
+{
+  Serial.println("started");
+  switchstat = digitalRead(switch1);// when switch on board the system is ON 
+  if (switchstat){
+    Serial.println("switch ON");
+    digitalWrite(led, HIGH);}
+  if (!switchstat)     //when switch on board the system is OFF
+  {
+    if (Firebase.failed()) 
+      {
+      Serial.print("setting number failed:");
+      Serial.println(Firebase.error());
+      firebasereconnect();    //If connection to firebase fails reconnect
+      return;
+      } 
+    else {
+    
+    x1 = Firebase.getString("S15").toInt();//get firebase variable S9 value and store it in x1
+    b = Firebase.getString("S11").toInt();//get firebase variable S11 value and store it in b
+    pirop = Firebase.getString("S10").toInt();//get firebase variable S10 value and store it in pirop
+    
+    if(x1==1 && pirop==0)//If power ON button pressed and 
+    { 
+      //digitalWrite(led, HIGH);
+      Serial.println("LED ON");
+      if (b)
+      {
+        analogWrite(led, b);
+        Serial.println("brightness set to");
+        Serial.print(b);
+      }
+    }
+      else if (x1==0)
+     {
+      digitalWrite(led, LOW);
+      Serial.println("LED OFF");
+      //ESP.deepSleep(10000, WAKE_RF_DEFAULT);    
+     }
+    
+    if (pirop == 1)
+    {
+        analogWrite(led, 500);
+        Serial.println("power saver mode");
+    }
+    else {
+      Serial.println("Power saver mode off");
+      }
+   }
+ }
+}
+  
