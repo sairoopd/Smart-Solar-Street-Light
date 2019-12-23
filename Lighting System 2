@@ -1,0 +1,140 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h>
+
+#define FIREBASE_HOST "*********.firebaseio.com"                     //the Firebase Project URL goes here without "http:" , "\" and "/"
+#define FIREBASE_AUTH "*********"       //Firebase Database Secret
+#define WIFI_SSID "Roo"
+#define WIFI_PASSWORD "qwertyui"
+#define led D1  // LED on Pin D4 of NodeMCU
+#define switch1 D2 // switch connected to Pin D2 on nodemcu
+
+/*************************************************************
+control variables for the mobile application and the switch  
+*************************************************************/
+int pirop; // Place to store power-saver mode input
+int x1
+int y;
+int b; 
+int switchstat;
+int v;
+int p;
+/**************************************************************
+variables for voltage and current sensor
+***************************************************************/
+int analogin = A0;
+float vout = 0.0;
+float vin = 0.0;
+float avgvin = 0.0;
+float r1 = 30000.0;
+float r2 = 7500.0;
+int value = 0;
+int i =0;
+/************************
+setup
+***********************/
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(led, OUTPUT);
+  pinMode(switch1, INPUT);
+  pinMode(analogin, INPUT);
+  Serial.println("setup");
+  switchstat = digitalRead(switch1);
+  if (switchstat){
+    Serial.println("switch ON");
+    digitalWrite(led, HIGH);}
+  WiFiManager wifiManager;
+  wifiManager.autoConnect("SSL");
+  IPAddress ip = WiFi.localIP();
+  Firebase.begin(FIREBASE_HOST,FIREBASE_AUTH); //connect to firebase cloud
+  Firebase.setInt("S4",0);                     //Set initializing values in firebase variables
+  Firebase.setInt("S5",0);
+  Firebase.setInt("S6",0);
+  Firebase.setInt("S7",0); //variable to push battery percentage to the cloud and to the apps
+  Firebase.setInt("S8",0); //variable to push the power consumed to the cloud and to the apps
+  Firebase.setInt("S9",0); 
+}
+
+void firebasereconnect()
+{
+  Serial.println("Trying to reconnect");
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+}
+
+void voltageread(){
+  value = analogRead(analogin);
+  vout = (value * 3.3)/ 1024.0;
+  vin = vout / (r2/(r1+r2));
+  Serial.print("Input V=");
+  Serial.println(vin,2);
+  if (vin > 8.99 && vin <12.69){
+    Firebase.setInt("S9",vin);
+  vin = vin - 9.0;
+  vin = (vin/0.036);
+  vin = ((int)vin);
+  Serial.println("battery level: ");
+  Serial.print(vin);
+  Serial.print("%");
+  Firebase.setInt("S7",vin);}
+  else{
+    vin = 0;
+    Firebase.setInt("S7",vin);
+    }
+  delay(1000);
+}
+
+
+void loop() 
+{
+  Serial.println("started");
+  switchstat = digitalRead(switch1);// when switch on board the system is ON
+  Serial.println(switchstat);
+  if (switchstat){
+    Serial.println("switch ON");
+    digitalWrite(led, HIGH);}
+    delay(1000);
+  if (!switchstat)     //when switch on board the system is OFF
+  {
+    if (Firebase.failed()) {
+      Serial.print("setting number failed:");
+      Serial.println(Firebase.error());
+      firebasereconnect();    //If connection to firebase fails reconnect
+      return;
+      } else {
+          voltageread();
+          x1 = Firebase.getInt("S4");//get firebase variable S4 value and store it in x1
+          b = Firebase.getInt("S6");//get firebase variable S6 value and store it in b
+          pirop = Firebase.getInt("S5");//get firebase variable S5 value and store it in pirop
+        
+            if(x1==1 && pirop==0)//If power ON button pressed and power saver is off
+            { 
+              //digitalWrite(led, HIGH);
+              Serial.println("LED ON");
+              if (b)
+              {
+                digitalWrite(led, b);
+                //Serial.println("brightness set to");
+                //Serial.print(b);
+              }
+            }
+            else if (x1==0)
+            {
+              digitalWrite(led, LOW);
+              Serial.println("LED OFF");
+              //ESP.deepSleep(10000, WAKE_RF_DEFAULT);    
+            }
+            if (pirop == 1)//power saver on
+            {
+                analogWrite(led, 500);
+                Serial.println("power saver mode");
+            }
+            else {
+              Serial.println("Power saver mode off");
+              }
+         }
+ }
+ 
+}
